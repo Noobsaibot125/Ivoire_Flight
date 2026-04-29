@@ -32,6 +32,9 @@ export const fetchAirports = async (query) => {
  * @returns {Promise<{success, flights, meta}>}
  */
 export const searchFlights = async ({ depart, destination, date, returnDate, tripType, airline }) => {
+  const token = localStorage.getItem('token');
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
   const res = await axios.post(`${API_BASE}/flights/search`, {
     depart,
     destination,
@@ -39,6 +42,6 @@ export const searchFlights = async ({ depart, destination, date, returnDate, tri
     returnDate: returnDate || undefined,
     tripType: tripType || 'one_way',
     airline: airline || 'all',
-  });
+  }, { headers });
   return res.data; // { success, flights, meta }
 };

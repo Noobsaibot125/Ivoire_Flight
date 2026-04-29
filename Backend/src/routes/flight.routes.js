@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const rateLimit = require('express-rate-limit');
 const { getAirlines, searchFlights, getAirports, getBookingRedirect } = require('../controllers/flight.controller');
+const { optionalAuth } = require('../middleware/auth.middleware');
 
 // Rate-limit plus strict pour les appels Gemini (coûteux)
 const searchLimiter = rateLimit({
@@ -29,7 +30,7 @@ router.get('/airlines', getAirlines);
 router.get('/airports', autocompleteLimiter, getAirports);
 
 // POST /api/flights/search    – recherche Gemini
-router.post('/search', searchLimiter, searchFlights);
+router.post('/search', searchLimiter, optionalAuth, searchFlights);
 
 // GET  /api/flights/book?token=… – résout l'URL officielle de la compagnie + redirige
 router.get('/book', getBookingRedirect);

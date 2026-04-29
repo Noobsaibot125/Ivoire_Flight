@@ -51,6 +51,10 @@ const User = sequelize.define('User', {
       priceAlerts: false,
       newsletter: false
     }
+  },
+  role: {
+    type: DataTypes.ENUM('user', 'admin', 'superadmin'),
+    defaultValue: 'user',
   }
 }, {
   timestamps: true,

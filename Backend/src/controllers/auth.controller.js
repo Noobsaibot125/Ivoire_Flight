@@ -13,7 +13,7 @@ const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString()
 /* ─── Helper: generate JWT ─── */
 const generateToken = (user) =>
   jwt.sign(
-    { id: user.id, email: user.email, phone: user.phone },
+    { id: user.id, email: user.email, phone: user.phone, role: user.role },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || '30d' }
   );
@@ -215,6 +215,7 @@ exports.registerPhoneComplete = async (req, res) => {
         phone: user.phone,
         emailVerified: user.emailVerified,
         phoneVerified: user.phoneVerified,
+        role: user.role,
       },
     });
   } catch (error) {
@@ -275,6 +276,7 @@ exports.verifyEmailOtp = async (req, res) => {
         phone: user.phone,
         emailVerified: user.emailVerified,
         phoneVerified: user.phoneVerified,
+        role: user.role,
       },
     });
   } catch (error) {
@@ -361,6 +363,7 @@ exports.loginByEmail = async (req, res) => {
         phone: user.phone,
         emailVerified: user.emailVerified,
         phoneVerified: user.phoneVerified,
+        role: user.role,
       },
     });
   } catch (error) {
@@ -406,6 +409,7 @@ exports.loginByPhone = async (req, res) => {
         phone: user.phone,
         emailVerified: user.emailVerified,
         phoneVerified: user.phoneVerified,
+        role: user.role,
       },
     });
   } catch (error) {
@@ -503,6 +507,7 @@ exports.loginPhoneVerifyOtp = async (req, res) => {
         phone: user.phone,
         emailVerified: user.emailVerified,
         phoneVerified: user.phoneVerified,
+        role: user.role,
       },
     });
   } catch (error) {
@@ -581,6 +586,7 @@ exports.updateProfile = async (req, res) => {
         phone: user.phone,
         emailVerified: user.emailVerified,
         phoneVerified: user.phoneVerified,
+        role: user.role,
       },
     });
   } catch (error) {

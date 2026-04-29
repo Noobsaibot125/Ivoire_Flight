@@ -1,4 +1,5 @@
 const axios = require('axios');
+const { SearchHistory } = require('../models');
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
@@ -508,6 +509,30 @@ const searchFlights = async (req, res) => {
         flights.sort((a, b) => a.priceEUR - b.priceEUR);
 
         console.log(`[SerpApi] ${flights.length} vols réels trouvés ✅`);
+
+        // 9) Enregistrer dans l'historique si l'utilisateur est connecté
+        if (req.user && req.user.id) {
+            try {
+                await SearchHistory.create({
+                    userId: req.user.id,
+                    type: 'flight',
+                    query: `${depIATA} → ${arrIATA}`,
+                    details: {
+                        depart,
+                        destination,
+                        departIATA: depIATA,
+                        arrivalIATA: arrIATA,
+                        date: outboundDate,
+                        returnDate: computedReturnDate,
+                        tripType: isRoundTrip ? 'round_trip' : 'one_way',
+                        airline: airline || 'Toutes'
+                    },
+                    resultsCount: flights.length
+                });
+            } catch (historyErr) {
+                console.error('[SearchHistory] Erreur sauvegarde:', historyErr.message);
+            }
+        }
 
         return res.json({
             success: true,
