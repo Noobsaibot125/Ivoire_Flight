@@ -133,6 +133,22 @@ export const AuthProvider = ({ children }) => {
     return data;
   };
 
+  /* ─── Admin Login ─── */
+  const adminLogin = async (email, password) => {
+    const res = await fetch('http://localhost:5000/api/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await res.json();
+    if (data.success && data.token) {
+      localStorage.setItem('token', data.token);
+      setToken(data.token);
+      setUser(data.user);
+    }
+    return data;
+  };
+
   /* ─── Login by phone (password) ─── */
   const loginByPhone = async (phone, password) => {
     const res = await fetch(`${API_URL}/login/phone`, {
@@ -218,6 +234,7 @@ export const AuthProvider = ({ children }) => {
     verifyEmailOtp,
     resendOtp,
     loginByEmail,
+    adminLogin,
     loginByPhone,
     loginPhoneSendOtp,
     loginPhoneVerifyOtp,

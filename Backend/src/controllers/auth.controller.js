@@ -522,6 +522,16 @@ exports.loginPhoneVerifyOtp = async (req, res) => {
    =================================================================== */
 exports.getMe = async (req, res) => {
   try {
+    if (req.user.role === 'superadmin' || req.user.role === 'admin') {
+      const Admin = require('../models/Admin');
+      const admin = await Admin.findByPk(req.user.id, {
+        attributes: { exclude: ['password'] },
+      });
+      if (admin) {
+        return res.status(200).json({ success: true, user: admin });
+      }
+    }
+
     const user = await User.findByPk(req.user.id, {
       attributes: { exclude: ['password'] },
     });

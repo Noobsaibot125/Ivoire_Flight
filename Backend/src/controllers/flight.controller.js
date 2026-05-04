@@ -55,8 +55,8 @@ const FALLBACK_AIRLINES = [
 
 // ── Mapping ville/pays → code IATA principal ───────────────────────────────
 const CITY_TO_IATA = {
-    abidjan: 'ABJ', paris: 'CDG', londres: 'LHR', london: 'LHR',
-    'new york': 'JFK', newyork: 'JFK', dubai: 'DXB', dubaï: 'DXB',
+    abidjan: 'ABJ', paris: 'PAR', londres: 'LON', london: 'LON',
+    'new york': 'NYC', newyork: 'NYC', dubai: 'DXB', dubaï: 'DXB',
     bruxelles: 'BRU', brussels: 'BRU', casablanca: 'CMN', dakar: 'DSS',
     'addis-abeba': 'ADD', 'addis abeba': 'ADD', addis: 'ADD',
     istanbul: 'IST', doha: 'DOH', nairobi: 'NBO', johannesburg: 'JNB',
@@ -67,6 +67,58 @@ const CITY_TO_IATA = {
     'le caire': 'CAI', cairo: 'CAI', madrid: 'MAD', genève: 'GVA',
     geneva: 'GVA', francfort: 'FRA', frankfurt: 'FRA', amsterdam: 'AMS',
     montreal: 'YUL', montréal: 'YUL', washington: 'IAD',
+};
+
+// ── Cache Destinations Populaires ───────────────────────────────────────────
+let popularDestinationsCache = null;
+const DESTINATIONS_BASE = [
+    { code: 'FR', flag: '🇫🇷', city: 'Paris', price: '285 000' },
+    { code: 'AE', flag: '🇦🇪', city: 'Dubai', price: '285 000' },
+    { code: 'SN', flag: '🇸🇳', city: 'Dakar', price: '205 000' },
+    { code: 'MA', flag: '🇲🇦', city: 'Casablanca', price: '285 000' },
+    { code: 'TR', flag: '🇹🇷', city: 'Istanbul', price: '285 000' },
+    { code: 'GH', flag: '🇬🇭', city: 'Accra', price: '285 000' },
+];
+
+const getPopularDestinations = async (req, res) => {
+    if (popularDestinationsCache) {
+        return res.json({ success: true, destinations: popularDestinationsCache });
+    }
+    
+    if (!SERPAPI_KEY) {
+        return res.json({ success: true, destinations: DESTINATIONS_BASE });
+    }
+
+    try {
+        const enriched = await Promise.all(DESTINATIONS_BASE.map(async (dest) => {
+            try {
+                const response = await axios.get(SERPAPI_URL, {
+                    params: {
+                        engine: 'google_images',
+                        q: `${dest.city} landmark high quality HD`,
+                        api_key: SERPAPI_KEY,
+                        num: 1,
+                        tbm: 'isch'
+                    }
+                });
+                
+                let image = response.data.images_results?.[0]?.thumbnail || response.data.images_results?.[0]?.original || null;
+                if (image && image.includes('googleusercontent.com') && image.includes('=s')) {
+                    image = image.replace(/=s\d+-w\d+-h\d+/, '=s600-w600-h400');
+                }
+                
+                return { ...dest, image };
+            } catch (error) {
+                console.error(`[SerpApi] Erreur Google Images pour ${dest.city}`);
+                return dest;
+            }
+        }));
+
+        popularDestinationsCache = enriched;
+        res.json({ success: true, destinations: popularDestinationsCache });
+    } catch (error) {
+        res.json({ success: true, destinations: DESTINATIONS_BASE });
+    }
 };
 
 const getIATA = (str) => {
@@ -82,41 +134,31 @@ const getIATA = (str) => {
 
 // ── Constructeurs de deep links par compagnie ──────────────────────────────
 const buildDeepLink = (airlineCode, dep, arr, depDate, retDate) => {
-    switch (airlineCode) {
-        case 'HF': // Air Côte d'Ivoire (pas de deep-link fiable → Google Flights filtré sur HF)
-            return `https://www.google.com/travel/flights?q=Flights%20from%20${dep}%20to%20${arr}%20on%20${depDate}%20returning%20${retDate}%20Air%20Cote%20d%27Ivoire`;
-        case 'AF': // Air France
-            return `https://wwws.airfrance.fr/search/offers?bookingFlow=LEISURE&pax=1ADT&cabinClass=ECONOMY&activeConnection=0&connections=${dep}-${arr}-${depDate},${arr}-${dep}-${retDate}`;
-        case 'ET': // Ethiopian Airlines
-            return `https://book.ethiopianairlines.com/dx/EDX/dyn/air/booking/availability?TRIP_TYPE=R&CABIN_CLASS=Y&ADT=1&CHD=0&INF=0&O0=${dep}&D0=${arr}&DDATE0=${depDate}&O1=${arr}&D1=${dep}&DDATE1=${retDate}`;
-        case 'TK': // Turkish Airlines
-            return `https://www.turkishairlines.com/en-int/flights/booking/?currency=USD&dateOption=normal&adultCount=1&childCount=0&infantCount=0&ond_0=${dep}%2C${arr}%2C${depDate}&ond_1=${arr}%2C${dep}%2C${retDate}`;
-        case 'EK': // Emirates
-            return `https://www.emirates.com/english/book/flight-search-results.aspx?fromCity=${dep}&toCity=${arr}&departDate=${depDate}&returnDate=${retDate}&numAdult=1&cabinClass=Y`;
-        case 'QR': // Qatar Airways
-            return `https://booking.qatarairways.com/nsp/views/showBooking.action?bookingClass=E&tripType=R&fromStation=${dep}&toStation=${arr}&departing=${depDate}&returning=${retDate}&adults=1`;
-        case 'AT': // Royal Air Maroc
-            return `https://www.royalairmaroc.com/fr-fr/reservation?from=${dep}&to=${arr}&departureDate=${depDate}&returnDate=${retDate}&tripType=R&adults=1&cabin=ECONOMY`;
-        case 'SN': // Brussels Airlines
-            return `https://www.brusselsairlines.com/en/booking/flight-search?tripType=ROUND_TRIP&originCode=${dep}&destinationCode=${arr}&outboundDate=${depDate}&inboundDate=${retDate}&adults=1&cabinClass=ECONOMY`;
-        case 'KQ': // Kenya Airways
-            return `https://www.kenya-airways.com/booking/?from=${dep}&to=${arr}&depart=${depDate}&return=${retDate}&adults=1`;
-        case 'MS': // EgyptAir
-            return `https://book.egyptair.com/dx/EAdx/#/flight-selection?journeyType=ROUND_TRIP&origin=${dep}&destination=${arr}&departure=${depDate}&return=${retDate}&adults=1`;
-        case 'AH': // Air Algérie
-            return `https://reservations.airalgerie.dz/plnext/AH_PROD/?TripType=R&O1=${dep}&D1=${arr}&DD1=${depDate}&O2=${arr}&D2=${dep}&DD2=${retDate}&Adults=1&Cabin=Y`;
-        case 'TU': // Tunisair
-            return `https://www.tunisair.com/site/publish/content/flightbooking.asp?from=${dep}&to=${arr}&departure=${depDate}&return=${retDate}&adults=1`;
-        case 'WB': // Rwandair
-            return `https://book.rwandair.com/plnext/WBibe/Override.action?TripType=R&O1=${dep}&D1=${arr}&DD1=${depDate}&O2=${arr}&D2=${dep}&DD2=${retDate}&Adults=1&Cabin=Y`;
-        case 'IB': // Iberia
-            return `https://www.iberia.com/fr/vols/?market=fr&language=fr&origin=${dep}&destination=${arr}&departureDate=${depDate}&returnDate=${retDate}&adults=1&cabin=ECONOMY`;
-        case 'SS': // Corsair
-            return `https://flywith.flycorsair.com/Flight/InternalSelect?o1=${dep}&d1=${arr}&dd1=${depDate}&o2=${arr}&d2=${dep}&dd2=${retDate}&ADT=1&CHD=0&INF=0&CABIN=Y&TT=R`;
-        default:
-            // Fallback Google Flights pour compagnies inconnues
-            return `https://www.google.com/travel/flights?q=Flights%20from%20${dep}%20to%20${arr}%20on%20${depDate}%20returning%20${retDate}`;
+    const airlinesMap = {
+        'HF': 'https://www.aircoteivoire.com/',
+        'AF': 'https://www.airfrance.fr/',
+        'ET': 'https://www.ethiopianairlines.com/',
+        'TK': 'https://www.turkishairlines.com/',
+        'EK': 'https://www.emirates.com/',
+        'QR': 'https://www.qatarairways.com/',
+        'AT': 'https://www.royalairmaroc.com/',
+        'TU': 'https://www.tunisair.com/',
+        'SN': 'https://www.brusselsairlines.com/',
+        'AH': 'https://airalgerie.dz/',
+        'HC': 'https://flyairsenegal.com/',
+        'KQ': 'https://www.kenya-airways.com/',
+        'MS': 'https://www.egyptair.com/',
+        'WB': 'https://www.rwandair.com/',
+        'IB': 'https://www.iberia.com/',
+        'SS': 'https://www.corsair.fr/'
+    };
+
+    // Si on a l'URL de la compagnie, on l'utilise, sinon Google Flights filtré
+    if (airlinesMap[airlineCode]) {
+        return airlinesMap[airlineCode];
     }
+    
+    return `https://www.google.com/travel/flights?q=Flights%20on%20${airlineCode}%20from%20${dep}%20to%20${arr}`;
 };
 
 // ── Fonction de génération de vols de secours (Fallback) ───────────────────
@@ -355,10 +397,19 @@ const searchFlights = async (req, res) => {
         const tripLabel = isRoundTrip ? `aller-retour (retour ${computedReturnDate})` : 'aller simple';
         console.log(`[SerpApi] Recherche: ${depIATA} → ${arrIATA} le ${outboundDate} (${tripLabel})`);
 
+        // Convert generic city IATA to comma-separated airports for Google Flights
+        const genericToAirports = {
+            'PAR': 'CDG,ORY,BVA',
+            'LON': 'LHR,LGW,STN,LTN,LCY',
+            'NYC': 'JFK,LGA,EWR'
+        };
+        const serpDep = genericToAirports[depIATA] || depIATA;
+        const serpArr = genericToAirports[arrIATA] || arrIATA;
+
         const params = {
             engine: 'google_flights',
-            departure_id: depIATA,
-            arrival_id: arrIATA,
+            departure_id: serpDep,
+            arrival_id: serpArr,
             outbound_date: outboundDate,
             currency: 'EUR',
             hl: 'fr',
@@ -454,7 +505,7 @@ const searchFlights = async (req, res) => {
                 airlineCode,
                 airlineLogo: entry.airline_logo || first.airline_logo || '',
                 bookingUrl: '', // Rempli juste après avec l'URL vers /flights/book
-                fallbackUrl: googleFlightsUrl,
+                fallbackUrl: buildDeepLink(airlineCode, depIATA, arrIATA, outboundDate, computedReturnDate || ''),
                 flightNumber: flightNum,
                 departureTime: formatTime(first.departure_airport?.time),
                 arrivalTime: formatTime(last.arrival_airport?.time),
@@ -513,22 +564,48 @@ const searchFlights = async (req, res) => {
         // 9) Enregistrer dans l'historique si l'utilisateur est connecté
         if (req.user && req.user.id) {
             try {
-                await SearchHistory.create({
-                    userId: req.user.id,
-                    type: 'flight',
-                    query: `${depIATA} → ${arrIATA}`,
-                    details: {
-                        depart,
-                        destination,
-                        departIATA: depIATA,
-                        arrivalIATA: arrIATA,
-                        date: outboundDate,
-                        returnDate: computedReturnDate,
-                        tripType: isRoundTrip ? 'round_trip' : 'one_way',
-                        airline: airline || 'Toutes'
-                    },
-                    resultsCount: flights.length
+                const existingSearch = await SearchHistory.findOne({
+                    where: {
+                        userId: req.user.id,
+                        type: 'flight',
+                        query: `${depIATA} → ${arrIATA}`
+                    }
                 });
+
+                if (existingSearch) {
+                    existingSearch.changed('updatedAt', true);
+                    await existingSearch.update({
+                        updatedAt: new Date(),
+                        details: {
+                            depart,
+                            destination,
+                            departIATA: depIATA,
+                            arrivalIATA: arrIATA,
+                            date: outboundDate,
+                            returnDate: computedReturnDate,
+                            tripType: isRoundTrip ? 'round_trip' : 'one_way',
+                            airline: airline || 'Toutes'
+                        },
+                        resultsCount: flights.length
+                    });
+                } else {
+                    await SearchHistory.create({
+                        userId: req.user.id,
+                        type: 'flight',
+                        query: `${depIATA} → ${arrIATA}`,
+                        details: {
+                            depart,
+                            destination,
+                            departIATA: depIATA,
+                            arrivalIATA: arrIATA,
+                            date: outboundDate,
+                            returnDate: computedReturnDate,
+                            tripType: isRoundTrip ? 'round_trip' : 'one_way',
+                            airline: airline || 'Toutes'
+                        },
+                        resultsCount: flights.length
+                    });
+                }
             } catch (historyErr) {
                 console.error('[SearchHistory] Erreur sauvegarde:', historyErr.message);
             }
@@ -749,4 +826,4 @@ const getBookingRedirect = async (req, res) => {
     }
 };
 
-module.exports = { getAirlines, searchFlights, getAirports, getBookingRedirect };
+module.exports = { getAirlines, searchFlights, getAirports, getBookingRedirect, getPopularDestinations };

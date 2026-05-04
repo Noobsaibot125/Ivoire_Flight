@@ -1,5 +1,6 @@
 const { sequelize } = require('../config/db');
 const User = require('./User');
+const Admin = require('./Admin');
 const Favorite = require('./Favorite');
 const Otp = require('./Otp');
 
@@ -23,6 +24,8 @@ module.exports = {
     sequelize,
     syncDB,
     User,
+    Admin,
     Favorite,
-    Otp
+    Otp,
+    SearchHistory
 };

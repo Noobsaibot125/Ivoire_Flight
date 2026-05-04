@@ -7,7 +7,7 @@ import logo from '../assets/logo.png';
 
 const AdminLogin = () => {
   const navigate = useNavigate();
-  const { loginByEmail, user, loading: authLoading } = useAuth();
+  const { adminLogin, user, loading: authLoading } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -30,7 +30,7 @@ const AdminLogin = () => {
 
     setLoading(true);
     try {
-      const data = await loginByEmail(email, password);
+      const data = await adminLogin(email, password);
       if (data.success) {
         if (data.user.role === 'superadmin') {
           toast.success('Bienvenue dans la console administration !');

@@ -65,8 +65,10 @@ app.use(globalLimiter);
    Routes
 ──────────────────────────────────────────────────────────────── */
 app.use('/api/auth',      require('./src/routes/auth.routes'));
+app.use('/api/admin',     require('./src/routes/admin.routes'));
 app.use('/api/dashboard', require('./src/routes/dashboard.routes'));
 app.use('/api/flights',   require('./src/routes/flight.routes'));
+app.use('/api/hotels',    require('./src/routes/hotel.routes'));
 
 // Health-check
 app.get('/', (req, res) => {

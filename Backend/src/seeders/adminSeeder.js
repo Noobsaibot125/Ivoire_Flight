@@ -1,5 +1,5 @@
 const bcrypt = require('bcrypt');
-const { User, syncDB } = require('../models');
+const { Admin, syncDB } = require('../models');
 const { connectDB } = require('../config/db');
 require('dotenv').config({ path: '../../.env' }); 
 
@@ -11,7 +11,7 @@ const seedAdmin = async () => {
     const adminEmail = 'admin@gmail.com';
     const adminPassword = 'KKStechnologies2022@';
     
-    const existingAdmin = await User.findOne({ where: { email: adminEmail } });
+    const existingAdmin = await Admin.findOne({ where: { email: adminEmail } });
     
     if (existingAdmin) {
       console.log('Admin user already exists. Updating role to superadmin...');
@@ -23,14 +23,12 @@ const seedAdmin = async () => {
     
     const hashedPassword = await bcrypt.hash(adminPassword, 10);
     
-    await User.create({
+    await Admin.create({
       firstName: 'Admin',
       lastName: 'System',
       email: adminEmail,
       password: hashedPassword,
       role: 'superadmin',
-      emailVerified: true,
-      phoneVerified: true,
     });
     
     console.log('\n==========================================');

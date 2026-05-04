@@ -18,7 +18,6 @@ const User = sequelize.define('User', {
   email: {
     type: DataTypes.STRING,
     allowNull: true,
-    unique: true,
     validate: {
       isEmail: true,
     },
@@ -30,7 +29,6 @@ const User = sequelize.define('User', {
   phone: {
     type: DataTypes.STRING,
     allowNull: true,
-    unique: true,
   },
   emailVerified: {
     type: DataTypes.BOOLEAN,
@@ -58,6 +56,16 @@ const User = sequelize.define('User', {
   }
 }, {
   timestamps: true,
+  indexes: [
+    {
+      unique: true,
+      fields: ['email']
+    },
+    {
+      unique: true,
+      fields: ['phone']
+    }
+  ]
 });
 
 module.exports = User;
